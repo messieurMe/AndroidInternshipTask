@@ -316,7 +316,7 @@ class DashboardFragment : Fragment() {
         mainViewModel.pause.observe(viewLifecycleOwner) {
             binding.isPause = it
         }
-        CoroutineScope(Dispatchers.Default).launch {
+        CoroutineScope(Dispatchers.IO).launch {
             if (mainViewModel.pause.value != null) {
                 while (uploads!!.getSize() > 0) {
                     mainViewModel.queue.value!!.add(
