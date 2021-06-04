@@ -12,6 +12,21 @@ class MainViewModel : ViewModel() {
 
     val queue = MutableLiveData<ArrayList<UploadingProgress>>(ArrayList())
 
-    var pause = MutableLiveData<Boolean?>()
+    var progress = MutableLiveData<Int>(0)
 
+    var notifyItemRangeChanged = MutableLiveData<Int?>()
+
+    var newFileName = "VideoName"
+
+
+    var cancelUploadForFirst = false
+
+    var enqueueUpload = MutableLiveData<String?>()
+
+    var userPause = MutableLiveData<Boolean?>()
+
+    var recyclerViewItemRemoved = MutableLiveData<Int?>()
+    var recyclerViewItemChanged = MutableLiveData<Int?>()
+
+    var isChecked = false
 }
