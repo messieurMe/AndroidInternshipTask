@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">VK test task</string>
+    <string name="title_home">Home</string>
+    <string name="title_dashboard">Dashboard</string>
+    <string name="title_notifications">Notifications</string>
+    <string name="add_to_upload">Add to upload</string>
+    <string name="pause_upload">Pause upload</string>
+    <string name="resume_upload_in_background">Resume upload in background</string>
+    <string name="videoname">VideoName</string>
+    <string name="connection_problem">Connection problem. Cannot upload data</string>
+
+
+    <integer name="com_vk_sdk_AppId">7866823</integer>
+
+</resources>

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <data>
+        <variable
+            name="isPause"
+            type="Boolean" />
+    </data>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".ui.dashboard.DashboardFragment">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toTopOf="@+id/add_to_upload"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent">
+
+        </androidx.recyclerview.widget.RecyclerView>
+
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switch_upload_mode"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:paddingStart="10dp"
+            android:paddingEnd="30dp"
+            android:text="@string/resume_upload_in_background"
+            android:textAlignment="center"
+            app:layout_constraintBottom_toBottomOf="@+id/pause"
+            app:layout_constraintEnd_toStartOf="@+id/pause"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@+id/pause" />
+
+        <ImageView
+            android:id="@+id/add_to_upload"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:contentDescription="@string/add_to_upload"
+            android:src="@drawable/ic_baseline_add_24"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintDimensionRatio="h,1:1"
+            app:layout_constraintEnd_toEndOf="parent" />
+
+        <ImageButton
+            android:id="@+id/pause"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
+            android:contentDescription="@string/pause_upload"
+            android:src="@{isPause == true ? @drawable/ic_baseline_play_arrow_24 : @drawable/ic_baseline_pause_24 }"
+            app:layout_constraintBottom_toTopOf="@+id/add_to_upload"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/switch_upload_mode" />
+
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/search_query"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:hint="@string/videoname"
+            android:singleLine="true"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/add_to_upload"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/recyclerView" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>
