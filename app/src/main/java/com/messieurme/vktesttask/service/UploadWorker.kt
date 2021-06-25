@@ -71,12 +71,11 @@ class UploadWorker(context: Context, parameters: WorkerParameters) :
                 while (uploads.getSize() > 0) {
                     val uploadIngFile = uploads.getFirst()
 
-                    if (uploadIngFile.url == "-" && getUrlForFile(uploadIngFile, accessToken)) {
+                    if (uploadIngFile.url == "-" && !getUrlForFile(uploadIngFile, accessToken)) {
                         toContinue++
                         delay(toContinue * 2000L)
                         continue
                     }
-
 
 
                     FileInputStream(uploadIngFile.uri).use { inputStream ->
