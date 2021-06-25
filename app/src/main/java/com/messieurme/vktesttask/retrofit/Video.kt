@@ -24,6 +24,7 @@ interface Video {
     fun save(
         @Query("name") name: String,
         @Query("access_token") accessToken: String,
+        @Query("description") description: String,
         @Query("v") v: String = "5.131"
     ): Call<Save>
 

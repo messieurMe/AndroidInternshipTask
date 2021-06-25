@@ -29,6 +29,8 @@ import com.messieurme.vktesttask.R
 import com.messieurme.vktesttask.databinding.FragmentHomeBinding
 import com.messieurme.vktesttask.recyclerViews.UploadedLisAdapter
 import com.messieurme.vktesttask.classes.SharedFunctions.Companion.retrofit
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 
 class HomeFragment : Fragment() {
@@ -44,8 +46,8 @@ class HomeFragment : Fragment() {
         binding = FragmentHomeBinding.inflate(inflater, container, false)
 
         mainViewModel = ViewModelProvider(requireActivity()).get(MainViewModel::class.java)
-        mainViewModel.accessToken.observe(viewLifecycleOwner, {
-            if (it == null || it.isEmpty()) return@observe
+        mainViewModel.accessToken.onEach {
+            if (it.isEmpty()) return@onEach
             CoroutineScope(Dispatchers.Default).launch {
                 try {
                     val uploadedId = getAlbumId(it)  //Id for uploaded is -1, but i'll download it
@@ -67,10 +69,9 @@ class HomeFragment : Fragment() {
                     VK.login(requireParentFragment().activity as MainActivity, arrayListOf(VKScope.VIDEO))
                 }
             }
-        })
+        }.launchIn(CoroutineScope(Dispatchers.Main))
         return binding.root
     }
-
 
     private suspend fun getVideosByAlbumId(accessToken: String, uploadedId: Int?): Get? {
         val response = retrofit.get(uploadedId!!, accessToken).awaitResponse()

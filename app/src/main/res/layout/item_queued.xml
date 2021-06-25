@@ -16,17 +16,19 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <ProgressBar
+    <TextView
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="0dp"
         android:layout_height="30dp"
+        android:gravity="center"
         android:indeterminateTint="@color/design_default_color_primary_variant"
         android:max="100"
         android:padding="4dp"
         android:paddingStart="0dp"
         android:progressTint="@color/design_default_color_primary_variant"
         android:secondaryProgressTint="@color/design_default_color_primary_variant"
+        android:text="queued"
         app:layout_constraintBottom_toBottomOf="@+id/cancel"
         app:layout_constraintEnd_toStartOf="@+id/progress_in_digits"
         app:layout_constraintStart_toStartOf="parent"
@@ -50,7 +52,6 @@
         android:gravity="center"
         android:paddingStart="2dp"
         android:paddingEnd="2dp"
-        android:text="-%"
         app:layout_constraintBottom_toBottomOf="@+id/cancel"
         app:layout_constraintEnd_toStartOf="@+id/cancel"
         app:layout_constraintTop_toTopOf="@+id/cancel" />

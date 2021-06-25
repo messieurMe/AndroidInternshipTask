@@ -8,18 +8,26 @@ import android.app.Notification
 import com.messieurme.vktesttask.R
 import androidx.work.ForegroundInfo
 import android.annotation.TargetApi
+import android.app.Activity
 import androidx.work.CoroutineWorker
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import androidx.work.WorkerParameters
 import android.app.NotificationManager
 import android.app.NotificationChannel
+import android.os.Handler
+import android.os.Looper
+import android.widget.Toast
 import kotlinx.coroutines.CoroutineScope
 import androidx.core.app.NotificationCompat
+import com.messieurme.vktesttask.classes.SharedFunctions
 import com.messieurme.vktesttask.room.UploadsDao
 import com.messieurme.vktesttask.room.UploadsDatabase
 import com.messieurme.vktesttask.classes.SharedFunctions.Companion.uploadFunction
 import com.messieurme.vktesttask.classes.SharedFunctions.Companion.getProgressInPercents
+import com.messieurme.vktesttask.classes.UploadingProgress
+import kotlinx.coroutines.delay
+import retrofit2.await
 
 class UploadWorker(context: Context, parameters: WorkerParameters) :
     CoroutineWorker(context, parameters) {
@@ -31,8 +39,26 @@ class UploadWorker(context: Context, parameters: WorkerParameters) :
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
 
+    private suspend fun getUrlForFile(uploadIngFile: UploadingProgress, accessToken: String) =
+        SharedFunctions.retrofit
+            .runCatching {
+                this.save(
+                    uploadIngFile.name,
+                    accessToken,
+                    uploadIngFile.description
+                ).await()
+            }
+            .onFailure {
+            }.onSuccess { save ->
+                uploadIngFile.apply { url = save.response.upload_url }
+            }.isSuccess
+
+
     override suspend fun doWork(): Result {
         val res = createNotification()
+
+        var accessToken = inputData.getString("access_token")!!
+
 
         try {
             // Dispatchers IO, as I read in documentation, creates thread for blocking operations if need.
@@ -41,29 +67,36 @@ class UploadWorker(context: Context, parameters: WorkerParameters) :
             @Suppress("BlockingMethodInNonBlockingContext")
             withContext(CoroutineScope(Dispatchers.IO).coroutineContext) {
                 getUploadingInfo()
-
+                var toContinue = 0
                 while (uploads.getSize() > 0) {
                     val uploadIngFile = uploads.getFirst()
-                    FileInputStream(uploadIngFile.uri)
-                        .use { inputStream ->
-                            if (uploadIngFile.uploaded != 0L) inputStream.skip(uploadIngFile.uploaded)
-                            var badResponse = 0
-                            while (uploadIngFile.fileSize != uploadIngFile.uploaded && !isStopped && badResponse < 3) {
-                                println("BADR: " + badResponse)
-                                uploadFunction(uploadIngFile, inputStream)
-                                updateNotification(
-                                    res,
-                                    getProgressInPercents(uploadIngFile.uploaded, uploadIngFile.fileSize),
-                                    false,
-                                    uploadIngFile.name
-                                )
-                                if (!uploadIngFile.lastSuccess) {
-                                    badResponse++
-                                } else {
-                                    uploads.update(uploadIngFile)
-                                }
+
+                    if (uploadIngFile.url == "-" && getUrlForFile(uploadIngFile, accessToken)) {
+                        toContinue++
+                        delay(toContinue * 2000L)
+                        continue
+                    }
+
+
+
+                    FileInputStream(uploadIngFile.uri).use { inputStream ->
+                        if (uploadIngFile.uploaded != 0L) inputStream.skip(uploadIngFile.uploaded)
+                        var badResponse = 0
+                        while (uploadIngFile.fileSize != uploadIngFile.uploaded && !isStopped && badResponse < 3) {
+                            uploadFunction(uploadIngFile, inputStream)
+                            updateNotification(
+                                res,
+                                getProgressInPercents(uploadIngFile.uploaded, uploadIngFile.fileSize),
+                                false,
+                                uploadIngFile.name
+                            )
+                            if (!uploadIngFile.lastSuccess) {
+                                badResponse++
+                            } else {
+                                uploads.update(uploadIngFile)
                             }
                         }
+                    }
                     if (uploadIngFile.fileSize == uploadIngFile.uploaded) {
                         uploads.remove(uploadIngFile)
                         updateNotification(res, 100, true, uploadIngFile.name)

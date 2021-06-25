@@ -7,69 +7,193 @@
         <variable
             name="isPause"
             type="Boolean" />
+        <variable
+            name="background"
+            type="Boolean" />
     </data>
 
-    <androidx.constraintlayout.widget.ConstraintLayout
+    <com.messieurme.vktesttask.classes.NormalMotionLayout
+        android:id="@+id/fuckin_ml"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        tools:context=".ui.dashboard.DashboardFragment">
+        android:layout_gravity="bottom"
+        android:background="@color/design_default_color_background"
+        android:elevation="500dp"
+        android:foregroundGravity="bottom"
+        android:translationZ="500dp"
+        app:layoutDescription="@xml/fragment_notifications_scene"
+        app:layout_anchorGravity="bottom"
+        tools:context=".ui.notifications.NotificationsFragment">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recyclerView"
+
+        <View
+            android:id="@+id/delimiter"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            app:layout_constraintBottom_toTopOf="@+id/add_to_upload"
+            android:layout_marginTop="-12dp"
+            android:layout_marginBottom="-123dp"
+            android:background="@drawable/playground"
+            android:nestedScrollingEnabled="true"
+            android:paddingBottom="-10dp"
+            app:layout_constraintBottom_toBottomOf="@+id/addToUpload"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent">
-
-        </androidx.recyclerview.widget.RecyclerView>
-
-        <androidx.appcompat.widget.SwitchCompat
-            android:id="@+id/switch_upload_mode"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:paddingStart="10dp"
-            android:paddingEnd="30dp"
-            android:text="@string/resume_upload_in_background"
-            android:textAlignment="center"
-            app:layout_constraintBottom_toBottomOf="@+id/pause"
-            app:layout_constraintEnd_toStartOf="@+id/pause"
-            app:layout_constraintHorizontal_bias="0.5"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="@+id/pause" />
-
-        <ImageView
-            android:id="@+id/add_to_upload"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:contentDescription="@string/add_to_upload"
-            android:src="@drawable/ic_baseline_add_24"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintDimensionRatio="h,1:1"
-            app:layout_constraintEnd_toEndOf="parent" />
+            app:layout_constraintHorizontal_bias="1.0"
+            app:layout_constraintStart_toStartOf="@+id/recyclerView"
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toTopOf="@id/up_down_arrow"
+            app:layout_constraintVertical_bias="1.0" />
 
         <ImageButton
             android:id="@+id/pause"
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:contentDescription="@string/pause_upload"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="#00FFFFFF"
+            android:contentDescription="pause"
+            android:scaleX="0.0"
+            android:scaleY="0.0"
             android:src="@{isPause == true ? @drawable/ic_baseline_play_arrow_24 : @drawable/ic_baseline_pause_24 }"
-            app:layout_constraintBottom_toTopOf="@+id/add_to_upload"
+            app:layout_constraintBottom_toBottomOf="@id/uploading_status"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/switch_upload_mode" />
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toTopOf="@id/uploading_status" />
 
+        <androidx.appcompat.widget.SwitchCompat
+            android:id="@+id/switchUploadMode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="#00F4F3F3"
+            android:checked="@{background}"
+            android:scaleX="0.0"
+            android:scaleY="0.0"
+            app:layout_constraintBottom_toBottomOf="@+id/uploading_background_switcher"
+            app:layout_constraintEnd_toEndOf="@+id/pause"
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toTopOf="@+id/uploading_background_switcher" />
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/search_query"
             android:layout_width="0dp"
-            android:layout_height="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="15dp"
+            android:layout_marginTop="20dp"
+            android:layout_marginEnd="30dp"
+            android:elevation="500dp"
             android:hint="@string/videoname"
+            android:scaleX="0.0"
+            android:scaleY="0.0"
             android:singleLine="true"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toStartOf="@+id/add_to_upload"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/recyclerView" />
+            android:translationZ="500dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="@+id/add_section"
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toTopOf="@+id/add_section" />
 
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/description"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:forceHasOverlappingRendering="true"
+            android:hint="Description"
+            android:maxLines="5"
+            android:scaleX="0.0"
+            android:scaleY="0.0"
+            android:singleLine="false"
+            app:layout_constraintEnd_toEndOf="@+id/search_query"
+            app:layout_constraintHorizontal_bias="0.0"
+            app:layout_constraintStart_toStartOf="@+id/search_query"
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toTopOf="@+id/search_query" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:elevation="-100dp"
+            android:fadingEdge="vertical"
+            android:fadingEdgeLength="2dp"
+            android:isScrollContainer="false"
+            android:translationZ="-100dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/upload_configuration"
+            android:layout_width="wrap_content"
+            android:layout_height="0dp"
+            android:layout_marginTop="69dp"
+            android:paddingTop="42dp"
+            android:scaleX="0.0"
+            android:scaleY="0.0"
+            android:text="Uploading configurations:"
+            android:textSize="25sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toBottomOf="@id/up_down_arrow" />
+
+        <Button
+            android:id="@+id/addToUpload"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="15dp"
+            android:scaleX="0.0"
+            android:scaleY="0.0"
+            android:text="Choose &amp; upload"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toBottomOf="@+id/description" />
+
+        <TextView
+            android:id="@+id/uploading_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:scaleX="0.0"
+            android:scaleY="0.0"
+            android:text='@{isPause == true ? "Resume uploading" : "Pause uploading"}'
+            android:textSize="20sp"
+            app:layout_constraintStart_toStartOf="@+id/upload_configuration"
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toTopOf="@+id/upload_configuration" />
+
+        <TextView
+            android:id="@+id/uploading_background_switcher"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:scaleX="0.0"
+            android:scaleY="0.0"
+            android:text="Upload in background:"
+            android:textSize="20sp"
+            app:layout_constraintStart_toStartOf="@+id/uploading_status"
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toTopOf="@+id/upload_configuration" />
+
+        <TextView
+            android:id="@+id/add_section"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:scaleX="0.0"
+            android:scaleY="0.0"
+            android:text="Upload new:"
+            android:textSize="25sp"
+            app:layout_constraintStart_toStartOf="@+id/upload_configuration"
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toTopOf="@+id/uploading_background_switcher" />
+
+        <ImageView
+            android:id="@+id/up_down_arrow"
+            android:layout_width="0dp"
+            android:layout_height="42dp"
+            android:layout_marginTop="-42dp"
+            android:paddingTop="5dp"
+            android:rotationX="180"
+            android:src="@drawable/ic_baseline_arrow_drop_down_24"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.498"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTag="delimiters_inside"
+            app:layout_constraintTop_toBottomOf="@id/recyclerView" />
+    </com.messieurme.vktesttask.classes.NormalMotionLayout>
+
 </layout>

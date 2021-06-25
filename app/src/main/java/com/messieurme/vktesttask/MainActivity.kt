@@ -1,41 +1,44 @@
 package com.messieurme.vktesttask
 
+import java.io.File
+import androidx.work.*
+import retrofit2.await
+import android.os.Looper
 import android.os.Bundle
 import com.vk.api.sdk.VK
+import android.os.Handler
+import androidx.room.Room
+import java.io.IOException
+import kotlinx.coroutines.*
 import android.app.Activity
 import android.widget.Toast
 import android.content.Intent
-import android.os.Handler
-import android.os.Looper
 import androidx.core.content.edit
 import com.vk.api.sdk.auth.VKScope
+import java.io.FileNotFoundException
 import com.vk.api.sdk.auth.VKAccessToken
 import com.vk.api.sdk.auth.VKAuthCallback
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.findNavController
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
+import com.messieurme.vktesttask.room.UploadsDao
+import java.util.concurrent.atomic.AtomicInteger
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.room.Room
-import androidx.work.*
-import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.messieurme.vktesttask.classes.SharedFunctions
-import com.messieurme.vktesttask.classes.UploadingProgress
-import com.messieurme.vktesttask.room.UploadsDao
 import com.messieurme.vktesttask.room.UploadsDatabase
 import com.messieurme.vktesttask.service.UploadWorker
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import retrofit2.await
-import java.io.File
-import java.io.FileInputStream
-import java.io.FileNotFoundException
-import java.io.IOException
-import java.lang.IllegalStateException
-import java.lang.NullPointerException
-import java.util.concurrent.atomic.AtomicInteger
+import com.messieurme.vktesttask.classes.SharedFunctions
+import com.messieurme.vktesttask.classes.UploadingProgress
+import androidx.navigation.ui.setupActionBarWithNavController
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.messieurme.vktesttask.classes.SharedFunctions.Companion.getProgressInPercents
+import kotlinx.coroutines.flow.*
+import java.nio.file.Paths
+import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.inputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -47,39 +50,40 @@ class MainActivity : AppCompatActivity() {
         prepareForWorking()
 
         setContentView(R.layout.activity_main)
+
+        setupNavController()
+        initializeDB()
+        initializeListeners()
+    }
+
+    private fun initializeListeners() {
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                mainViewModel.enqueueUpload.receiveAsFlow().collect { url ->
+                    url?.let { prepareForUploading(it) }
+                }
+            }
+        }
+
+        lifecycleScope.launch {
+            lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                mainViewModel.userPause.collect { uploadPause() }
+            }
+        }
+
+    }
+
+    private fun setupNavController() {
         val navView: BottomNavigationView = findViewById(R.id.nav_view)
         val navController = findNavController(R.id.nav_host_fragment)
         val appBarConfiguration = AppBarConfiguration(
             setOf(
-                R.id.navigation_home, R.id.navigation_dashboard, R.id.navigation_notifications
+                R.id.navigation_home, R.id.navigation_dashboard
             )
         )
+
         setupActionBarWithNavController(navController, appBarConfiguration)
         navView.setupWithNavController(navController)
-
-
-
-        initializeDB()
-
-        mainViewModel.enqueueUpload.observe(this, {
-            if (it != null) {
-                prepareForUploading(it)
-            }
-        })
-        mainViewModel.userPause.observe(this, { uploadPause(it!!) })
-
-        CoroutineScope(Dispatchers.IO).launch {
-            if (mainViewModel.userPause.value != null) {
-                while (uploads!!.getSize() > 0) {
-                    mainViewModel.queue.value!!.add(
-                        uploads!!.getFirst().also { uploads!!.remove(it.sessionID) })
-                }
-                mainViewModel.notifyItemRangeChanged.postValue(
-                    mainViewModel.queue.value!!.size
-                )
-                resumeUploading()
-            }
-        }
     }
 
     override fun onDestroy() {
@@ -92,6 +96,9 @@ class MainActivity : AppCompatActivity() {
         val preferences = getPreferences(Activity.MODE_PRIVATE)
 
         mainViewModel.userPause.value = preferences.getBoolean("pause", false)
+        mainViewModel.isChecked.value = preferences.getBoolean("background_mode", true)
+
+        CoroutineScope(Dispatchers.IO).launch { mainViewModel.kostylForUI.emit(true) }
 
         if (!preferences.contains("access_token") || forceLogin) {
             VK.login(this, arrayListOf(VKScope.VIDEO))
@@ -100,61 +107,28 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    var pauseUploads = false
-
-    override fun onPause() {
-        super.onPause()
-        pauseUploads = true
-        CoroutineScope(Dispatchers.Default).launch {
-            updateRoom()
-            while (numberOfThreads.get() != 0) {
-                continue
-            }
-        }
-        if (mainViewModel.isChecked && mainViewModel.queue.value!!.size > 0 && !mainViewModel.userPause.value!!) {
-            startWorkManager()
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        pauseUploads = false
-
-        if (db == null || !db!!.isOpen) {
-            initializeDB()
-        }
-        CoroutineScope(Dispatchers.IO).launch {
-            val workInfo =
-                WorkManager.getInstance(this@MainActivity).getWorkInfosByTag("Work").await()
-            if (workInfo.size != 0) {
-                WorkManager.getInstance(this@MainActivity).cancelAllWorkByTag("Work").result.await()
-            }
-
-            while (uploads!!.getSize() > 0) {
-                mainViewModel.queue.value!!.add(
-                    uploads!!.getFirst().also { uploads!!.remove(it.sessionID) })
-            }
-            resumeUploading()
-        }
-    }
-
-
     override fun onStop() {
         super.onStop()
-        getPreferences(Activity.MODE_PRIVATE).edit {
-            putBoolean("pause", mainViewModel.userPause.value ?: false)
+        numberOfThreads.set(0)
+        uploadSessionIds.clear()
+        runBlocking {
+            CoroutineScope(Dispatchers.IO).launch {
+                getPreferences(Activity.MODE_PRIVATE).edit {
+                    putBoolean("pause", mainViewModel.userPause.value ?: false)
+                    putBoolean("background_mode", mainViewModel.isChecked.value ?: true)
+                }
+                updateRoom()
+                if ((mainViewModel.isChecked.value == true) && uploads!!.getSize() > 0 && !mainViewModel.userPause.value!!) {
+                    startWorkManager()
+                }
+            }
         }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         val callback = object : VKAuthCallback {
             override fun onLogin(token: VKAccessToken) {
-                getPreferences(Activity.MODE_PRIVATE).edit {
-                    putString(
-                        "access_token",
-                        token.accessToken
-                    )
-                }
+                getPreferences(Activity.MODE_PRIVATE).edit { putString("access_token", token.accessToken) }
                 mainViewModel.accessToken.value = token.accessToken
             }
 
@@ -171,12 +145,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun uploadPause(newValue: Boolean) {
-        if (!newValue) {
-            CoroutineScope(Dispatchers.IO).launch {
-                resumeUploading()
-            }
-        }
+    private fun uploadPause() {
+        CoroutineScope(Dispatchers.IO).launch { resumeUploading() }
     }
 
     var numberOfThreads = AtomicInteger(0)
@@ -188,72 +158,74 @@ class MainActivity : AppCompatActivity() {
     private fun prepareForUploading(uri: String) {
         CoroutineScope(Dispatchers.IO).launch {
             val name = mainViewModel.newFileName
+            val description = mainViewModel.description
             val fileSize: Long = File(uri).length()
-            SharedFunctions.retrofit
-                .runCatching { this.save(name, mainViewModel.accessToken.value!!).await() }
-                .onFailure {
-                    //Could catch different exceptions but here might be only network or server problems
-                    //In my case messages will be same for both exceptions
-                    Handler(Looper.getMainLooper()).post {
-                        Toast.makeText(
-                            this@MainActivity, getString(R.string.connection_problem), Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }.onSuccess { save ->
-                    val uploadInfo = UploadingProgress(
-                        url = save.response.upload_url,
-                        fileSize = fileSize,
-                        uri = uri,
-                        name = name
-                    )
-                    mainViewModel.queue.value!!.add(uploadInfo)
-                    mainViewModel.recyclerViewItemChanged.postValue(mainViewModel.queue.value!!.size - 1)
-                    resumeUploading()
-                }
+            val uploadInfo = UploadingProgress(
+                fileSize = fileSize,
+                description = description,
+                uri = uri,
+                name = name
+            )
+
+            mainViewModel.queue.value.addLast(uploadInfo)
+            mainViewModel.notifyQueueChanged.send(-1)
+
+            resumeUploading()
         }
     }
 
 
-    private fun resumeUploading() {
+    private suspend fun resumeUploading() {
         if (numberOfThreads.compareAndSet(0, 1)) {
-            upload()
-            numberOfThreads.addAndGet(-1)
-            //  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-            //  possibly can occur problem when one thread finished uploading, but didn't decreased value
-            //  In this case new uploading will not start,
-            //  BUT
-            //  good practice is to call CAS and decrease value each time we going inside global `while`
-            //  inside `upload()`.
-            //  BUT X2
-            //  it's atomic variable. Operations with it are very heavy. Problem when uploading didn't start
-            //  will occur rare (if will occur). So to increase performance I call operations with atomic
-            //  variable here. There is no chance to run into deadlock. Simply uploading will not start if
-            //  one thread (now coroutine, but earlier it was thread) didn't decreased value and new thread
-            //  ran into CAS
+            val id = System.currentTimeMillis()
+            uploadSessionIds.add(id)
+            upload(id)
+            uploadSessionIds.remove(id)
+            numberOfThreads.compareAndSet(1, 0)
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        CoroutineScope(Dispatchers.IO).launch {
+            val workInfo = WorkManager.getInstance(this@MainActivity).getWorkInfosByTag("Work").await()
+            if (workInfo.size != 0) {
+                WorkManager.getInstance(this@MainActivity).cancelAllWorkByTag("Work").result.await()
+            }
 
-    private fun updateRoom() {
-        try {
-            uploads?.removeAll()
-            mainViewModel.queue.value!!.forEach { i -> uploads?.insert(i) }
-            mainViewModel.queue.value!!.clear()
-        } catch (e: java.lang.Exception) {
-            initializeDB()
-            mainViewModel.queue.value!!.forEach { i -> uploads?.insert(i) }
-            mainViewModel.queue.value!!.clear()
-            db?.close()
+            mainViewModel.queue.value.clear()
+            if (uploads!!.getSize() > 0) {
+//                uploads!!.getIds().forEach { id ->
+//                    mainViewModel.queue.value.addPreLast(uploads!!.getById(id))
+//                    uploads!!.remove(id)
+//                }
+
+                mainViewModel.queue.value.addAllPreLast(uploads!!.getAll())
+                uploads!!.removeAll()
+
+                mainViewModel.notifyQueueChanged.send(3)
+
+                mainViewModel.queue.value.first().also {
+                    mainViewModel.progress.emit(getProgressInPercents(it.uploaded, it.fileSize))
+                }
+            }
+            resumeUploading()
         }
+    }
+
+    private suspend fun updateRoom() {
+        uploads!!.removeAll()
+        uploads!!.insertAll(mainViewModel.queue.value)
+        mainViewModel.queue.value.clear()
     }
 
 
     private fun startWorkManager() {
-        val constraint =
-            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
+        val accessToken = workDataOf("access_token" to mainViewModel.accessToken.value)
+        val constraint = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
         val myWork = OneTimeWorkRequest.Builder(UploadWorker::class.java)
             .setConstraints(constraint)
+            .setInputData(accessToken)
             .addTag("Work")
             .build()
 
@@ -261,7 +233,6 @@ class MainActivity : AppCompatActivity() {
             .getInstance(this)
             .enqueueUniqueWork("Work", ExistingWorkPolicy.APPEND_OR_REPLACE, myWork)
     }
-
 
     private fun initializeDB() {
         db = Room.databaseBuilder(
@@ -272,75 +243,111 @@ class MainActivity : AppCompatActivity() {
         uploads = db!!.UploadsDao()
     }
 
+    @Volatile
+    var uploadSessionIds = HashSet<Long>(0)
 
-    private fun upload() {
-        while (mainViewModel.queue.value!!.size > 0 && !pauseUploads && numberOfThreads.get() == 1 && !mainViewModel.userPause.value!!) {
-            val uploadIngFile = mainViewModel.queue.value!!.first()
-            try {
-                FileInputStream(uploadIngFile.uri).use { inputStream ->
-                    if (uploadIngFile.uploaded != 0L) {
-                        inputStream.skip(uploadIngFile.uploaded)
-                    }
-                    var badResponseCounter = 0
-                    while (uploadIngFile.fileSize != uploadIngFile.uploaded && !pauseUploads && !mainViewModel.userPause.value!! && badResponseCounter < 3) {
-                        SharedFunctions.uploadFunction(uploadIngFile, inputStream)
-                        if (!uploadIngFile.lastSuccess) {
-                            badResponseCounter++
-                        }
-                        val progress = SharedFunctions.getProgressInPercents(
-                            uploadIngFile.uploaded,
-                            uploadIngFile.fileSize
-                        )
-                        mainViewModel.progress.postValue(progress)
 
-                        if (mainViewModel.cancelUploadForFirst) {
-                            mainViewModel.cancelUploadForFirst = false
-                            mainViewModel.queue.value!!.removeAt(0)
-                            mainViewModel.recyclerViewItemRemoved.postValue(0)
-                            break
-                        }
-                    }
-                    if (badResponseCounter == 3) {
-                        //Maybe I can store response code, kinda
-                        //If it's 4** error, then connection problems, 5** - server
-                        showToast("Bad response. Check internet connection or vk servers")
-                        mainViewModel.userPause.value = true
+    @OptIn(ExperimentalPathApi::class)
+    private suspend fun upload(id: Long) {
+        fun stopUploadingChecker(): Boolean {
+            return mainViewModel.queue.value.size > 0 && uploadSessionIds.contains(id) && !mainViewModel.userPause.value!!
+        }
+
+        suspend fun badResponse(n: Int) =
+            when (n) {
+                0 -> false
+                1, 2 -> {
+                    val timeout = n * 2000L
+                    showToast("Bad response. Check internet connection or vk servers. Retrying after $timeout")
+                    delay(timeout)
+                    false
+                }
+                3 -> {
+                    showToast("Cannot upload")
+                    mainViewModel.userPause.emit(true)
+                    true
+                }
+                else -> true
+            }
+
+        withContext(Dispatchers.IO) {
+            var badResponseCounter = 0
+
+            while (stopUploadingChecker()) {
+                val uploadIngFile = mainViewModel.queue.value.first()
+                if (uploadIngFile.url == "-") {
+                    if (getUrlForFile(uploadIngFile)) {
+                        mainViewModel.queue.value.first()
+                    } else {
+                        badResponseCounter++
+                        badResponse(badResponseCounter)
+                        continue
                     }
                 }
-            } catch (e: IOException) {
-                showToast("Problems with reading file for upload ${uploadIngFile.name}")
-                mainViewModel.userPause.value = true
-                break
-            } catch (e: SecurityException) {
-                showToast("Cannot access file for upload ${uploadIngFile.name}")
-                mainViewModel.userPause.value = true
-                break
-            } catch (e: FileNotFoundException) {
-                showToast("Cannot find file for upload  ${uploadIngFile.name}. May be it were deleted or replaced")
-                mainViewModel.userPause.value = true
-                break
-            } catch (e: Exception) {
-                //I don't know which exceptions can occur, but I don't want app crash too
-                showToast("Error while uploading")
-                mainViewModel.userPause.value = true
-                break
-            }
-            if (uploadIngFile.fileSize == uploadIngFile.uploaded) {
-                mainViewModel.queue.value!!.removeAt(0)
-                mainViewModel.recyclerViewItemRemoved.postValue(0)
+                try {
+                    Paths.get(uploadIngFile.uri).inputStream().use { inputStream ->
+                        if (uploadIngFile.uploaded != 0L) {
+                            inputStream.skip(uploadIngFile.uploaded)
+                        }
+                        while (uploadIngFile.fileSize != uploadIngFile.uploaded && stopUploadingChecker() && mainViewModel.queue.value.first().sessionID == uploadIngFile.sessionID) {
+                            SharedFunctions.uploadFunction(uploadIngFile, inputStream)
+
+                            if (!uploadIngFile.lastSuccess) {
+                                badResponse(++badResponseCounter)
+                            }
+                            mainViewModel.progress.emit(uploadIngFile.progress)
+                        }
+                    }
+                } catch (e: IOException) {
+                    showToast("Problems with reading file for upload ${uploadIngFile.name}")
+                    mainViewModel.userPause.emit(true)
+                    break
+                } catch (e: SecurityException) {
+                    showToast("Cannot access file for upload ${uploadIngFile.name}")
+                    mainViewModel.userPause.emit(true)
+                    break
+                } catch (e: FileNotFoundException) {
+                    showToast("Cannot find file for upload  ${uploadIngFile.name}. May be it were deleted or replaced")
+                    mainViewModel.userPause.emit(true)
+                    break
+                } catch (e: Exception) {
+                    //I don't know which exceptions can occur, but I don't want app crash too
+                    showToast("Error while uploading")
+                    mainViewModel.userPause.emit(true)
+                    break
+                }
+
+                if (uploadIngFile.fileSize == uploadIngFile.uploaded) {
+                    mainViewModel.queue.value.removeAt(0)
+                    mainViewModel.notifyQueueChanged.send(1)
+                }
             }
         }
     }
 
+    private suspend fun getUrlForFile(uploadIngFile: UploadingProgress) = SharedFunctions.retrofit
+        .runCatching {
+            this.save(
+                uploadIngFile.name,
+                mainViewModel.accessToken.value,
+                uploadIngFile.description
+            ).await()
+        }
+        .onFailure {
+            Handler(Looper.getMainLooper()).post {
+                Toast.makeText(
+                    this@MainActivity, getString(R.string.connection_problem), Toast.LENGTH_SHORT
+                ).show()
+            }
+        }.onSuccess { save ->
+            uploadIngFile.url = save.response.upload_url
+        }.isSuccess
+
     private fun showToast(message: String) {
         try {
-            Handler(Looper.getMainLooper()).post {
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
-            }
+            Handler(Looper.getMainLooper()).post { Toast.makeText(this, message, Toast.LENGTH_SHORT).show() }
         } catch (e: IllegalStateException) {
             //If not attached to context
         }
     }
-
-
 }

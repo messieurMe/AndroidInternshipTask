@@ -2,31 +2,37 @@ package com.messieurme.vktesttask
 
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.messieurme.vktesttask.classes.PriorityArrayList
 import com.messieurme.vktesttask.classes.UploadingProgress
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import java.util.*
 import kotlin.collections.ArrayList
 
 class MainViewModel : ViewModel() {
 
-    val accessToken = MutableLiveData<String>()
+    val accessToken = MutableStateFlow<String>("")
 
-    val queue = MutableLiveData<ArrayList<UploadingProgress>>(ArrayList())
+    val queue = MutableStateFlow<PriorityArrayList<UploadingProgress>>(PriorityArrayList())
 
-    var progress = MutableLiveData<Int>(0)
-
-    var notifyItemRangeChanged = MutableLiveData<Int?>()
+    var progress = MutableStateFlow<Int>(0)
 
     var newFileName = "VideoName"
-
+    var description = ""
 
     var cancelUploadForFirst = false
 
-    var enqueueUpload = MutableLiveData<String?>()
 
-    var userPause = MutableLiveData<Boolean?>()
+    var enqueueUpload =Channel<String?>(5)
 
-    var recyclerViewItemRemoved = MutableLiveData<Int?>()
-    var recyclerViewItemChanged = MutableLiveData<Int?>()
+    var isChecked = MutableStateFlow<Boolean?>(null)
+    var userPause = MutableStateFlow<Boolean?>(null)
 
-    var isChecked = false
+    var kostylForUI = MutableStateFlow<Boolean?>(null)
+
+    //SharedFlow?
+    var notifyQueueChanged = Channel<Int>(5)
 }
