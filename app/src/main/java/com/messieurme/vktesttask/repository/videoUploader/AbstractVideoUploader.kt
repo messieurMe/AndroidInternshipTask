@@ -1,10 +1,12 @@
 package com.messieurme.vktesttask.repository.videoUploader
 
+import android.provider.MediaStore
 import android.util.Log
 import com.messieurme.vktesttask.classes.*
 import com.messieurme.vktesttask.exceptions.NoInternetException
 import com.messieurme.vktesttask.repository.keyValueRepository.KeyValueRepository
 import com.messieurme.vktesttask.repository.videoUploader.helperClasses.HttpsUploadWorker
+import com.messieurme.vktesttask.retrofit.Video
 import com.messieurme.vktesttask.room.UploadingQueue
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
@@ -25,6 +27,7 @@ abstract class AbstractVideoUploader {
     @Inject lateinit var httpsUploadWorker: HttpsUploadWorker
     @Inject lateinit var keyValueRepository: KeyValueRepository
     @Inject lateinit var coroutine: CoroutineScopes
+    @Inject lateinit var retrofitVideoClient : Video
 
     private var _progress = MutableStateFlow<Int>(0)
     val progress = _progress.asStateFlow()
@@ -182,7 +185,7 @@ abstract class AbstractVideoUploader {
     }
 
 
-    private suspend fun getUrlForFile(uploadIngFile: UploadingItem) = SharedFunctions.retrofit
+    private suspend fun getUrlForFile(uploadIngFile: UploadingItem) = retrofitVideoClient
         .runCatching {
             this.save(
                 uploadIngFile.name,

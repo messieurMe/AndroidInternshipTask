@@ -34,12 +34,5 @@ class AccessTokenClass @Inject constructor() {
         return _accessTokenF.value
     }
 
-
-    suspend fun awaitUpdate(): String {
-        while (!wasUpdated) {
-            delay(100)
-        }
-        return _accessTokenF.value
-    }
 }
 

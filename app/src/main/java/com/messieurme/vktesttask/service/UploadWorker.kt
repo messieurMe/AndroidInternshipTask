@@ -1,38 +1,23 @@
 package com.messieurme.vktesttask.service
 
 import android.os.Build
-import androidx.room.Room
 import android.content.Context
-import java.io.FileInputStream
 import android.app.Notification
 import com.messieurme.vktesttask.R
 import androidx.work.ForegroundInfo
 import android.annotation.TargetApi
 import androidx.work.CoroutineWorker
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
 import androidx.work.WorkerParameters
 import android.app.NotificationManager
 import android.app.NotificationChannel
-import android.util.Log
-import kotlinx.coroutines.CoroutineScope
 import androidx.core.app.NotificationCompat
-import com.messieurme.vktesttask.classes.AccessTokenClass
 import com.messieurme.vktesttask.classes.CoroutineScopes
-import com.messieurme.vktesttask.classes.SharedFunctions
-import com.messieurme.vktesttask.room.UploadingQueue
-import com.messieurme.vktesttask.room.RoomDatabase
-import com.messieurme.vktesttask.classes.SharedFunctions.Companion.uploadFunction
-import com.messieurme.vktesttask.classes.SharedFunctions.Companion.getProgressInPercents
-import com.messieurme.vktesttask.classes.UploadingItem
-import com.messieurme.vktesttask.modules.CoroutineScopesModule
-import com.messieurme.vktesttask.repository.keyValueRepository.KeyValueRepository
 import com.messieurme.vktesttask.repository.videoUploader.ForegroundVideoUploader
+import com.messieurme.vktesttask.retrofit.Video
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
-import retrofit2.await
 import javax.inject.Inject
 
 class UploadWorker(
@@ -47,25 +32,13 @@ class UploadWorker(
     @Inject
     lateinit var coroutine: CoroutineScopes
 
+    @Inject
+    lateinit var retrofitVideoClient : Video
+
     private var notificationId = 1
 
     private val myNotificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-
-    private suspend fun getUrlForFile(uploadIngFile: UploadingItem, accessToken: String) =
-        SharedFunctions.retrofit
-            .runCatching {
-                this.save(
-                    uploadIngFile.name,
-                    accessToken,
-                    uploadIngFile.description
-                ).await()
-            }
-            .onFailure {
-            }.onSuccess { save ->
-                uploadIngFile.apply { url = save.response.upload_url }
-            }.isSuccess
 
 
     override suspend fun doWork(): Result {

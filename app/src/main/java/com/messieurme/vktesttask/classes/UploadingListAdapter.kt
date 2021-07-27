@@ -28,12 +28,10 @@ class UploadingLisAdapter(
     }
 
     private fun updateList(it: Int) = kotlin.runCatching {
-        Log.d("REMOVEITEM", "Updating list")
         val newList = dashboardViewModel.queueCopy()
         val diffResult = DiffUtil.calculateDiff(DiffUtilCallbackUploading(this.items, newList), true)
         diffResult.dispatchUpdatesTo(this)
         items = PriorityArrayList(newList)
-        Log.d("REMOVEITEM", "Done")
     }.isSuccess
 
     inner class CustomViewHolderUploading(item: ItemUploadingBinding) :

@@ -1,14 +1,7 @@
 package com.messieurme.vktesttask.ui.main
 
-import java.io.File
-import androidx.work.*
-import retrofit2.await
-import android.os.Looper
 import android.os.Bundle
 import com.vk.api.sdk.VK
-import android.os.Handler
-import androidx.room.Room
-import java.io.IOException
 import kotlinx.coroutines.*
 import android.app.Activity
 import android.widget.Toast
@@ -16,31 +9,19 @@ import android.content.Intent
 import androidx.activity.viewModels
 import androidx.core.content.edit
 import com.vk.api.sdk.auth.VKScope
-import java.io.FileNotFoundException
 import com.vk.api.sdk.auth.VKAccessToken
 import com.vk.api.sdk.auth.VKAuthCallback
 import androidx.navigation.findNavController
 import androidx.lifecycle.*
-import com.messieurme.vktesttask.room.UploadingQueue
-import java.util.concurrent.atomic.AtomicInteger
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupWithNavController
-import com.messieurme.vktesttask.room.RoomDatabase
-import com.messieurme.vktesttask.service.UploadWorker
-import com.messieurme.vktesttask.classes.SharedFunctions
-import com.messieurme.vktesttask.classes.UploadingItem
 import androidx.navigation.ui.setupActionBarWithNavController
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.messieurme.vktesttask.R
 import com.messieurme.vktesttask.classes.AccessTokenClass
-import com.messieurme.vktesttask.classes.SharedFunctions.Companion.getProgressInPercents
 import com.messieurme.vktesttask.repository.videoUploader.WorkManagerForegroundVideoUploader
 import dagger.android.support.DaggerAppCompatActivity
-import kotlinx.coroutines.flow.*
-import java.nio.file.Paths
 import javax.inject.Inject
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.inputStream
 
 
 class MainActivity : DaggerAppCompatActivity() {
