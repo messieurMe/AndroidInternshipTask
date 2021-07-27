@@ -46,7 +46,7 @@
         app:layout_constraintTop_toTopOf="@+id/uploading_background_switcher" />
 
     <com.google.android.material.textfield.TextInputEditText
-        android:id="@+id/search_query"
+        android:id="@+id/video_name"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="15dp"
@@ -66,10 +66,10 @@
         android:hint="Description"
         android:maxLines="5"
         android:singleLine="false"
-        app:layout_constraintEnd_toEndOf="@+id/search_query"
+        app:layout_constraintEnd_toEndOf="@+id/video_name"
         app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="@+id/search_query"
-        app:layout_constraintTop_toBottomOf="@+id/search_query" />
+        app:layout_constraintStart_toStartOf="@+id/video_name"
+        app:layout_constraintTop_toBottomOf="@+id/video_name" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"

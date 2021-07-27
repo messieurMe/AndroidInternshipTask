@@ -8,38 +8,52 @@ import android.app.Notification
 import com.messieurme.vktesttask.R
 import androidx.work.ForegroundInfo
 import android.annotation.TargetApi
-import android.app.Activity
 import androidx.work.CoroutineWorker
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import androidx.work.WorkerParameters
 import android.app.NotificationManager
 import android.app.NotificationChannel
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import androidx.core.app.NotificationCompat
+import com.messieurme.vktesttask.classes.AccessTokenClass
+import com.messieurme.vktesttask.classes.CoroutineScopes
 import com.messieurme.vktesttask.classes.SharedFunctions
-import com.messieurme.vktesttask.room.UploadsDao
-import com.messieurme.vktesttask.room.UploadsDatabase
+import com.messieurme.vktesttask.room.UploadingQueue
+import com.messieurme.vktesttask.room.RoomDatabase
 import com.messieurme.vktesttask.classes.SharedFunctions.Companion.uploadFunction
 import com.messieurme.vktesttask.classes.SharedFunctions.Companion.getProgressInPercents
-import com.messieurme.vktesttask.classes.UploadingProgress
+import com.messieurme.vktesttask.classes.UploadingItem
+import com.messieurme.vktesttask.modules.CoroutineScopesModule
+import com.messieurme.vktesttask.repository.keyValueRepository.KeyValueRepository
+import com.messieurme.vktesttask.repository.videoUploader.ForegroundVideoUploader
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.receiveAsFlow
 import retrofit2.await
+import javax.inject.Inject
 
-class UploadWorker(context: Context, parameters: WorkerParameters) :
+class UploadWorker(
+    context: Context,
+    parameters: WorkerParameters,
+) :
     CoroutineWorker(context, parameters) {
 
+    @Inject
+    lateinit var foregroundVideoUploader: ForegroundVideoUploader
+
+    @Inject
+    lateinit var coroutine: CoroutineScopes
+
     private var notificationId = 1
-    private lateinit var db: UploadsDatabase
-    private lateinit var uploads: UploadsDao
+
     private val myNotificationManager =
         context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
 
-    private suspend fun getUrlForFile(uploadIngFile: UploadingProgress, accessToken: String) =
+    private suspend fun getUrlForFile(uploadIngFile: UploadingItem, accessToken: String) =
         SharedFunctions.retrofit
             .runCatching {
                 this.save(
@@ -56,59 +70,27 @@ class UploadWorker(context: Context, parameters: WorkerParameters) :
 
     override suspend fun doWork(): Result {
         val res = createNotification()
-
-        var accessToken = inputData.getString("access_token")!!
-
+        updateNotification(res, 100, true, "Prepare for uploading...")
 
         try {
-            // Dispatchers IO, as I read in documentation, creates thread for blocking operations if need.
-            // I didn't find out how to remove warning (except the way to create your own thread, but
-            // Dispatchers.IO must do it for me), so that's why Suppress here
-            @Suppress("BlockingMethodInNonBlockingContext")
-            withContext(CoroutineScope(Dispatchers.IO).coroutineContext) {
-                getUploadingInfo()
-                var toContinue = 0
-                while (uploads.getSize() > 0) {
-                    val uploadIngFile = uploads.getFirst()
+            foregroundVideoUploader.onResume().join()
 
-                    if (uploadIngFile.url == "-" && !getUrlForFile(uploadIngFile, accessToken)) {
-                        toContinue++
-                        delay(toContinue * 2000L)
-                        continue
-                    }
+            var currentUploadingName = ""
+            foregroundVideoUploader.notifyQueueChanged.receiveAsFlow().onEach {
+                currentUploadingName = foregroundVideoUploader.getCurrentUploadingName()
+            }.launchIn(coroutine.default())
 
-
-                    FileInputStream(uploadIngFile.uri).use { inputStream ->
-                        if (uploadIngFile.uploaded != 0L) inputStream.skip(uploadIngFile.uploaded)
-                        var badResponse = 0
-                        while (uploadIngFile.fileSize != uploadIngFile.uploaded && !isStopped && badResponse < 3) {
-                            uploadFunction(uploadIngFile, inputStream)
-                            updateNotification(
-                                res,
-                                getProgressInPercents(uploadIngFile.uploaded, uploadIngFile.fileSize),
-                                false,
-                                uploadIngFile.name
-                            )
-                            if (!uploadIngFile.lastSuccess) {
-                                badResponse++
-                            } else {
-                                uploads.update(uploadIngFile)
-                            }
-                        }
-                    }
-                    if (uploadIngFile.fileSize == uploadIngFile.uploaded) {
-                        uploads.remove(uploadIngFile)
-                        updateNotification(res, 100, true, uploadIngFile.name)
-                    } else { //something cancelled us
-                        uploads.update(uploadIngFile)
-                        myNotificationManager.cancelAll()
-                        break
-                    }
-                }
+            while (!isStopped && foregroundVideoUploader.getQueueSize() > 0) {
+                updateNotification(res,
+                    foregroundVideoUploader.progress.value,
+                    false,
+                    currentUploadingName
+                )
+                delay(1500)
             }
-        } catch (ignore: Exception) { //it throws "kotlinx.coroutines.JobCancellationException" which I can't catch
-        } finally {
-            db.close()
+            foregroundVideoUploader.onSystemPause()
+            myNotificationManager.cancelAll()
+        } catch (ignore: Exception) {
         }
         return Result.success()
     }
@@ -128,7 +110,7 @@ class UploadWorker(context: Context, parameters: WorkerParameters) :
         res: NotificationCompat.Builder,
         progress: Int,
         indeterminate: Boolean,
-        fileName: String
+        fileName: String,
     ) {
         myNotificationManager.notify(1,
             res
@@ -138,12 +120,6 @@ class UploadWorker(context: Context, parameters: WorkerParameters) :
                 .build().also { it.flags = it.flags or 2 }
         )
     }
-
-    private suspend fun getUploadingInfo() =
-        withContext(CoroutineScope(Dispatchers.Default).coroutineContext) {
-            db = Room.databaseBuilder(applicationContext, UploadsDatabase::class.java, "database").build()
-            uploads = db.UploadsDao()
-        }
 
     private fun createForegroundInfo(): NotificationCompat.Builder {
         val notification = NotificationCompat.Builder(applicationContext, "Work")
@@ -171,5 +147,4 @@ class UploadWorker(context: Context, parameters: WorkerParameters) :
         channel.description = "Work Notifications"
         myNotificationManager.createNotificationChannel(channel)
     }
-
 }

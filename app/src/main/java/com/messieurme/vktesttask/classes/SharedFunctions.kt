@@ -1,12 +1,8 @@
 package com.messieurme.vktesttask.classes
 
-import android.os.Handler
-import android.os.Looper
-import android.widget.Toast
 import com.google.gson.GsonBuilder
 import com.messieurme.vktesttask.retrofit.Video
 import retrofit2.Retrofit
-import retrofit2.await
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.DataOutputStream
 import java.io.InputStream
@@ -47,8 +43,8 @@ class SharedFunctions {
 
         fun getProgressInPercents(uploaded: Long, total: Long)= (uploaded * 100L / total).toInt()
 
-        fun uploadFunction(uploadInfo: UploadingProgress, inputStream: InputStream?) {
-            val buffer = ByteArray(1024 * 1024 * 2)
+        fun uploadFunction(uploadInfo: UploadingItem, inputStream: InputStream?) {
+            val buffer = ByteArray(1024 * 1024 * 1)
             val connection: HttpsURLConnection =
                 getHttpsUrlConnection(
                     URL(uploadInfo.url),

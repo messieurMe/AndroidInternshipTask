@@ -4,12 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools">
 
     <data>
+
         <variable
-            name="isPause"
-            type="Boolean" />
-        <variable
-            name="background"
-            type="Boolean" />
+            name="viewModel"
+            type="com.messieurme.vktesttask.ui.dashboard.DashboardViewModel" />
     </data>
 
     <com.messieurme.vktesttask.classes.NormalMotionLayout
@@ -48,10 +46,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:backgroundTint="#00FFFFFF"
-            android:contentDescription="pause"
+            android:onClick="@{() -> viewModel.userPause()}"
             android:scaleX="0.0"
             android:scaleY="0.0"
-            android:src="@{isPause == true ? @drawable/ic_baseline_play_arrow_24 : @drawable/ic_baseline_pause_24 }"
+            android:src="@{viewModel.pausedByUser ? @drawable/ic_baseline_play_arrow_24 : @drawable/ic_baseline_pause_24 }"
             app:layout_constraintBottom_toBottomOf="@id/uploading_status"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTag="delimiters_inside"
@@ -62,7 +60,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:backgroundTint="#00F4F3F3"
-            android:checked="@{background}"
             android:scaleX="0.0"
             android:scaleY="0.0"
             app:layout_constraintBottom_toBottomOf="@+id/uploading_background_switcher"
@@ -71,7 +68,7 @@
             app:layout_constraintTop_toTopOf="@+id/uploading_background_switcher" />
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/search_query"
+            android:id="@+id/video_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="15dp"
@@ -99,11 +96,11 @@
             android:scaleX="0.0"
             android:scaleY="0.0"
             android:singleLine="false"
-            app:layout_constraintEnd_toEndOf="@+id/search_query"
+            app:layout_constraintEnd_toEndOf="@+id/video_name"
             app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintStart_toStartOf="@+id/search_query"
+            app:layout_constraintStart_toStartOf="@+id/video_name"
             app:layout_constraintTag="delimiters_inside"
-            app:layout_constraintTop_toTopOf="@+id/search_query" />
+            app:layout_constraintTop_toTopOf="@+id/video_name" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerView"
@@ -151,7 +148,7 @@
             android:layout_height="wrap_content"
             android:scaleX="0.0"
             android:scaleY="0.0"
-            android:text='@{isPause == true ? "Resume uploading" : "Pause uploading"}'
+            android:text='@{viewModel.pausedByUser ? "Resume uploading" : "Pause uploading"}'
             android:textSize="20sp"
             app:layout_constraintStart_toStartOf="@+id/upload_configuration"
             app:layout_constraintTag="delimiters_inside"

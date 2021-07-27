@@ -23,7 +23,7 @@ class NormalMotionLayout : MotionLayout {
             R.id.addToUpload,
             R.id.pause,
             R.id.description,
-            R.id.search_query
+            R.id.video_name
         ).map<Int, View> { findViewById(it) }
         return if (views.any { touchEventInsideTargetView(it, ev) }) {
             false

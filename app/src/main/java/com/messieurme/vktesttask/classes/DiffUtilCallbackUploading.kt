@@ -3,8 +3,8 @@ package com.messieurme.vktesttask.classes
 import androidx.recyclerview.widget.DiffUtil
 
 
-class DiffUtilCallbackUploading(private val oldList: List<UploadingProgress>,
-                                private val newList: List<UploadingProgress>
+class DiffUtilCallbackUploading(private val oldList: List<UploadingItem>,
+                                private val newList: List<UploadingItem>
 ) :
     DiffUtil.Callback() {
     override fun getOldListSize(): Int {
@@ -24,6 +24,4 @@ class DiffUtilCallbackUploading(private val oldList: List<UploadingProgress>,
         val newProduct = newList[newItemPosition]
         return (oldProduct.name == newProduct.name && oldProduct.progress == newProduct.progress)
     }
-
-
 }

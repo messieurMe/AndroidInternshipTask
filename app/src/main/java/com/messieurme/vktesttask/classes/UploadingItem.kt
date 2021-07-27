@@ -11,7 +11,7 @@ import java.nio.ByteBuffer
 import java.util.*
 
 @Entity
-data class UploadingProgress(
+data class UploadingItem(
     @PrimaryKey var sessionID: Long = System.currentTimeMillis(),
     var url: String = "-",
     var uri: String,
@@ -24,7 +24,8 @@ data class UploadingProgress(
     var lastSuccess: Boolean = true,
     var lastRequestResponseCode: Int = 200,
 ) {
-    var progress: Int
+    @Ignore
+    var progress: Int = 0
         get() = (uploaded * 100L / fileSize).toInt()
-        private set(value) {}
+        private set
 }

@@ -72,11 +72,11 @@
             motion:layout_constraintBottom_toBottomOf="parent"
             android:layout_marginBottom="30dp" />
         <Constraint
-            motion:layout_constraintEnd_toEndOf="@+id/search_query"
+            motion:layout_constraintEnd_toEndOf="@+id/video_name"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             motion:layout_constraintHorizontal_bias="0.0"
-            motion:layout_constraintStart_toStartOf="@+id/search_query"
+            motion:layout_constraintStart_toStartOf="@+id/video_name"
             android:id="@+id/description"
             android:scaleY="1"
             android:scaleX="1"
@@ -86,7 +86,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             motion:layout_constraintStart_toStartOf="@+id/add_section"
-            android:id="@+id/search_query"
+            android:id="@+id/video_name"
             motion:layout_constraintEnd_toEndOf="parent"
             android:layout_marginEnd="30dp"
             android:scaleX="1"
@@ -101,7 +101,7 @@
             android:id="@+id/add_section"
             android:scaleX="1"
             android:scaleY="1"
-            motion:layout_constraintBottom_toTopOf="@+id/search_query"
+            motion:layout_constraintBottom_toTopOf="@+id/video_name"
             android:layout_marginBottom="15dp" />
         <Constraint
             android:layout_width="wrap_content"
